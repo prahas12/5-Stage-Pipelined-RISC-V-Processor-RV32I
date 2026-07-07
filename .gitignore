@@ -1,7 +1,65 @@
-sim/sim.out
-sim/waves.vcd
-sim/imem_init.hex
+# ==========================================================
+# Xilinx Vivado Generated Files
+# ==========================================================
+
+.Xil/
+.cache/
+.hw/
+.ip_user_files/
+.runs/
+.sim/
+.gen/
+.srcs/
+.tmp/
+
 *.jou
 *.log
-.Xil/
-vivado*.str
+*.pb
+*.str
+*.wdb
+*.wcfg.backup
+*.backup
+*.zip
+
+# Generated Reports
+*.rpt
+*.dcp
+*.ltx
+*.bit
+*.bin
+*.mmi
+*.prm
+*.bgn
+*.xml
+
+# Simulation Outputs
+*.vcd
+*.vvp
+*.fst
+*.wlf
+*.mem
+*.hex
+
+# Temporary Files
+*.tmp
+*.bak
+*.swp
+*.swo
+
+# OS Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor Settings
+.vscode/
+.idea/
+*.code-workspace
+
+# ==========================================================
+# Keep These Files
+# ==========================================================
+
+!README.md
+!LICENSE
+!.gitignore
