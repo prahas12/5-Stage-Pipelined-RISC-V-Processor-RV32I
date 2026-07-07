@@ -55,12 +55,6 @@ IF  →  ID  →  EX  →  MEM  →  WB
 │
 ├── constraints.xdc
 │
-├── images/
-│   ├── waveform.png
-│   ├── rtl_schematic.png
-│   ├── rtl_zoom.png
-│   └── implementation.png
-│
 ├── README.md
 ├── LICENSE
 └── .gitignore
