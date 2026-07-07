@@ -1,0 +1,7 @@
+sim/sim.out
+sim/waves.vcd
+sim/imem_init.hex
+*.jou
+*.log
+.Xil/
+vivado*.str
