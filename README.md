@@ -1,13 +1,9 @@
 # 5-Stage Pipelined RISC-V RV32I Processor
 
-```verilog
-module core_top (
-    input wire clk,
-    input wire rst_n,
-    output wire [31:0] dbg_pc,
-    output wire [31:0] dbg_result
-);
-```
+![Verilog](https://img.shields.io/badge/Verilog-2001-blue.svg)
+![RISC-V](https://img.shields.io/badge/RISC--V-RV32I-red.svg)
+![Vivado](https://img.shields.io/badge/Vivado-2025.2-orange.svg)
+![License](https://img.shields.io/badge/License-MIT-green.svg)
 
 This repository contains a synthesizable and mathematically robust implementation of a 32-bit RISC-V processor (RV32I Base Integer Instruction Set) using Verilog-2001. 
 
