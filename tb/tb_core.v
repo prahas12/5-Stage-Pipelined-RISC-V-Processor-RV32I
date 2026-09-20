@@ -1,54 +1,48 @@
-`timescale 1ns/1ps
+`timescale 1ns / 1ps
 
 module tb_core;
 
     reg clk;
     reg rst_n;
 
-    core_top dut (
-        .clk   (clk),
-        .rst_n (rst_n)
+    wire [31:0] dbg_pc;
+    wire [31:0] dbg_result;
+
+    core_top u_core (
+        .clk(clk),
+        .rst_n(rst_n),
+        .dbg_pc(dbg_pc),
+        .dbg_result(dbg_result)
     );
 
-    // 100 MHz style clock, period is arbitrary for a functional sim
-    initial clk = 1'b0;
-    always #5 clk = ~clk;
-
     initial begin
-        rst_n = 1'b0;
-        repeat (3) @(posedge clk);
-        rst_n = 1'b1;
+        clk = 0;
+        forever #5 clk = ~clk;
     end
 
     initial begin
-        $dumpfile("waves.vcd");
-        $dumpvars(0, tb_core);
-    end
+        // Initialize Reset
+        rst_n = 0;
+        #20;
+        rst_n = 1;
 
-    // let the small test program run out, then dump register state and finish
-    initial begin
-        rst_n = 1'b0;
-        #1000;
-        $display("---------------------------------------------");
-        $display(" register dump");
-        $display("---------------------------------------------");
-        $display(" x1  = %0d", dut.u_regfile.regs[1]);
-        $display(" x2  = %0d", dut.u_regfile.regs[2]);
-        $display(" x3  = %0d", dut.u_regfile.regs[3]);
-        $display(" x4  = %0d", dut.u_regfile.regs[4]);
-        $display(" x5  = %0d", dut.u_regfile.regs[5]);
-        $display(" x6  = %0d", dut.u_regfile.regs[6]);
-        $display(" x7  = %0d", dut.u_regfile.regs[7]);
-        $display(" x8  = %0d", dut.u_regfile.regs[8]);
-        $display(" x9  = %0d", dut.u_regfile.regs[9]);
-        $display(" x10 = %0d", dut.u_regfile.regs[10]);
-        $display(" x11 = %0d", dut.u_regfile.regs[11]);
-        $display(" x20 = %0d", dut.u_regfile.regs[20]);
-        $display(" x21 = %0d", dut.u_regfile.regs[21]);
-        $display(" x22 = %0d", dut.u_regfile.regs[22]);
-        $display(" mem[0] = %0d", dut.u_dmem.mem[0]);
-        $display("---------------------------------------------");
+        // Wait for a reasonable amount of time to let the simple program finish
+        #200;
+
+        // Check the memory at address 0 to see if x3 (15 = 0xF) was written successfully
+        if (u_core.u_dmem.ram[0] === 32'h0000000F) begin
+            $display("SUCCESS: Value 15 correctly stored in DMEM.");
+        end else begin
+            $display("FAILED: Expected 15, got %d", u_core.u_dmem.ram[0]);
+        end
+
         $finish;
+    end
+
+    // Optional: Dump waveforms
+    initial begin
+        $dumpfile("waveform.vcd");
+        $dumpvars(0, tb_core);
     end
 
 endmodule

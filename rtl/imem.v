@@ -1,22 +1,20 @@
-`timescale 1ns/1ps
-// instruction memory, word addressed, loaded at sim start from a hex file
-module imem #(
-    parameter DEPTH = 256
-)(
-    /* verilator lint_off UNUSED */
-    input  wire [31:0] addr,
-    /* verilator lint_on UNUSED */
-    output wire [31:0] rdata
+`timescale 1ns / 1ps
+
+module imem #(parameter DEPTH = 256) (
+    input  wire [31:0] a,
+    output wire [31:0] rd
 );
 
-    reg [31:0] mem [0:DEPTH-1];
+    reg [31:0] ram [0:DEPTH-1];
 
+    integer i;
     initial begin
-        $readmemh("imem_init.hex", mem);
+        for (i = 0; i < DEPTH; i = i + 1)
+            ram[i] = 32'd0;
+        $readmemh("imem_init.hex", ram);
     end
 
-    // word aligned access, byte address in, only the bits that actually
-    // index our depth are used (avoids a needless wide-to-narrow warning)
-    assign rdata = mem[addr[$clog2(DEPTH)+1:2]];
+    // Word aligned read
+    assign rd = ram[a[31:2]];
 
 endmodule

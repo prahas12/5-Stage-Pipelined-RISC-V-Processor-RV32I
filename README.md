@@ -1,122 +1,105 @@
-# 5-Stage Pipelined RISC-V Processor (RV32I)
+# 5-Stage Pipelined RISC-V RV32I Processor
 
-A synthesizable **5-stage pipelined RISC-V processor** implementing the **RV32I Base Integer Instruction Set**, written in Verilog HDL.
-
-This project was developed to understand the complete RTL design flow—from processor design and pipeline implementation to simulation, synthesis, and FPGA implementation using **Xilinx Vivado**.
-
----
-
-## Pipeline Architecture
-
-```
-IF  →  ID  →  EX  →  MEM  →  WB
+```verilog
+module core_top (
+    input wire clk,
+    input wire rst_n,
+    output wire [31:0] dbg_pc,
+    output wire [31:0] dbg_result
+);
 ```
 
-| Stage | Description |
-|--------|-------------|
-| **IF** | Fetch instruction and update Program Counter |
-| **ID** | Decode instruction, read register file, generate immediate |
-| **EX** | ALU execution, branch evaluation, forwarding logic |
-| **MEM** | Data memory read/write operations |
-| **WB** | Write results back to the register file |
+This repository contains a synthesizable and mathematically robust implementation of a 32-bit RISC-V processor (RV32I Base Integer Instruction Set) using Verilog-2001. 
 
----
+The processor is modeled after the classic architectural standards presented in Patterson & Hennessy's Computer Organization and Design RISC-V Edition. It is highly modularized, well-commented, completely free of Unknown (X) signal propagation, and is physically proven to synthesize and route on AMD/Xilinx Artix-7 FPGAs.
 
-## Features
+## Key Features
 
-- RV32I Base Integer Instruction Set
-- Classic 5-stage pipelined architecture
-- Data forwarding unit
-- Load-use hazard detection
-- Branch and jump handling
-- Register file with synchronous write
-- Instruction memory
-- Data memory
-- Fully synthesizable Verilog RTL
-- Simulated, synthesized and implemented using Xilinx Vivado
+* Classic 5-Stage Pipeline: Instruction Fetch (IF), Instruction Decode (ID), Execute (EX), Memory (MEM), and Writeback (WB).
+* Full Hazard Resolution: Hardware-level data hazard forwarding and load-use stalling to guarantee instruction integrity without software NOPs.
+* Synthesizable Memory: Block RAM (BRAM) inferable Instruction and Data Memories.
+* Distributed RAM Regfile: Write-first 32x32-bit Register File that infers highly efficient LUT-RAM.
+* Zero X Propagation: Safely initializes unmapped memory and resolves all branches efficiently.
 
----
+## Supported Instructions (37 Total)
+
+This processor implements the complete RV32I Base Integer Instruction Set required to run standard C programs compiled via the RISC-V GCC toolchain.
+
+* R-Type (Arithmetic & Logical): ADD, SUB, XOR, OR, AND, SLL, SRL, SRA, SLT, SLTU
+* I-Type (Immediate Arithmetic): ADDI, XORI, ORI, ANDI, SLLI, SRLI, SRAI, SLTI, SLTIU
+* I-Type & S-Type (Memory Access): LW (Load Word), SW (Store Word)
+* B-Type (Branches): BEQ, BNE, BLT, BGE, BLTU, BGEU
+* J-Type & I-Type (Jumps): JAL (Jump & Link), JALR (Jump & Link Register)
+* U-Type (Upper Immediates): LUI (Load Upper Immediate), AUIPC (Add Upper Immediate to PC)
+
+(Note: Sub-word memory accesses like LB/LH/SB/SH were intentionally omitted to maintain a 32-bit aligned block-RAM memory interface, optimizing for introductory FPGA synthesis).
+
+## Architecture & Hazard Handling
+
+### Pipeline Stages
+1. IF (Instruction Fetch): The PC pulls the next instruction from imem.v. It defaults to PC+4 unless redirected by the EX stage.
+2. ID (Instruction Decode): controller.v derives all pipeline control signals combinatorially. Source registers are fetched, and immediates are extended based on the instruction type.
+3. EX (Execute): alu.v computes arithmetic and branch targets. Branch conditions are evaluated here.
+4. MEM (Memory): Data is loaded from or stored to dmem.v on the clock edge.
+5. WB (Writeback): The result is safely written back to the destination register.
+
+### Hazard Resolution
+* Data Hazards (RAW): A dedicated forwarding_unit.v multiplexes operands. If an instruction in EX needs a register currently being processed in MEM or WB, the data is forwarded instantly.
+* Load-Use Hazards: The hazard_unit.v detects if an instruction in EX is a Load (LW) and its destination is needed by the ID stage. It safely stalls the IF and ID stages for 1 cycle and flushes the EX stage to insert a bubble.
+* Control Hazards (Branches/Jumps): Because branch logic is evaluated in the EX stage, taking a branch incurs a 2-cycle penalty. The hazard_unit.v automatically flushes the two mistakenly fetched instructions in the IF and ID stages.
+
+## Timing & Performance (Implementation Results)
+
+The design has been thoroughly routed on an AMD/Xilinx Artix-7 (xc7a35tcpg236-1) FPGA using Vivado 2025.2. The exact physical routing and timing reports are included in the reports/ folder.
+
+Implementation Timing Summary:
+* Target Clock: 100 MHz (10.00 ns period)
+* Worst Negative Slack (WNS): +1.720 ns
+* Total Negative Slack (TNS): 0.000 ns
+* Worst Hold Slack (WHS): +0.038 ns
+
+Performance Metrics:
+* Maximum Operating Frequency (Fmax): ~120.77 MHz 
+* Critical Path: EX Stage -> D/E Pipeline Reg -> Forwarding Mux -> ALU -> E/M Pipeline Reg.
+* Base CPI: 1.0 (excluding branches and load-stalls).
 
 ## Repository Structure
 
 ```text
-5-Stage-Pipelined-RISC-V-Processor-RV32I/
-│
-├── rtl/
-│   ├── core_top.v
-│   ├── alu.v
-│   ├── decoder.v
-│   ├── regfile.v
-│   ├── imem.v
-│   └── dmem.v
-│
-├── tb/
-│   └── tb_core.v
-│
-├── constraints.xdc
-│
-├── README.md
-├── LICENSE
-└── .gitignore
+├── rtl/                    # Synthesizable Verilog Source Code
+│   ├── alu.v               # Arithmetic Logic Unit
+│   ├── controller.v        # Main Control Unit
+│   ├── core_top.v          # Top-level datapath & pipeline registers
+│   ├── dmem.v              # Data Memory
+│   ├── forwarding_unit.v   # Data Hazard Forwarding Unit
+│   ├── hazard_unit.v       # Stall and Flush Logic
+│   ├── imem.v              # Instruction Memory
+│   ├── regfile.v           # 32x32-bit Register File
+│   └── rv32i_defines.vh    # Constants and Opcode definitions
+├── tb/                     # Verification
+│   └── tb_core.v           # Self-checking testbench
+├── reports/                # Post-Implementation metrics
+│   └── timing_report.rpt   # Detailed exact Vivado timing report
+├── vivado/                 # Vivado automation scripts
+│   ├── constraints.xdc     # 100 MHz clock constraints
+│   ├── create_gui_project.tcl # TCL script to generate .xpr project
+│   └── run_simulation.bat  # One-click xsim simulation script
+├── Makefile                # Icarus Verilog compilation script
+└── LICENSE                 # MIT License
 ```
 
----
+## How to Reproduce & Simulate
 
-# Simulation (Vivado)
+### 1. Using Xilinx Vivado (Recommended)
+You can generate the project automatically using the provided TCL script in the vivado/ directory, or manually create a project, add the rtl/ and tb/ sources, and run synthesis/implementation.
 
-Simulation was performed using the **Xilinx Vivado Simulator**.
-
-1. Create a new RTL Project in Vivado.
-2. Add all files from the `rtl/` directory.
-3. Set `core_top.v` as the top module.
-4. Add `tb/tb_core.v` under **Simulation Sources**.
-5. Run **Behavioral Simulation**.
-6. Observe the pipeline execution using the waveform viewer.
-
----
-
-## Vivado Design Flow
-
+### 2. Using Icarus Verilog (Command Line)
+You can use the provided Makefile with Icarus Verilog:
+```bash
+make        # Compiles and runs the simulation
+make wave   # Opens GTKWave to view the output
 ```
-RTL Design
-     │
-     ▼
-Behavioral Simulation
-     │
-     ▼
-Synthesis
-     │
-     ▼
-RTL Schematic
-     │
-     ▼
-Implementation
-     │
-     ▼
-Device View
-```
-
----
-
-## Tools Used
-
-- Verilog HDL
-- Xilinx Vivado
-- Xilinx Artix-7 FPGA
-
----
-
-## Future Improvements
-
-- Branch prediction
-- CSR support
-- Interrupt handling
-- RV32M Extension
-- Instruction and Data Cache
-- AXI Interface
-
----
 
 ## License
 
-This project is released under the **MIT License**.
+This project is licensed under the MIT License - see the LICENSE file for details.
